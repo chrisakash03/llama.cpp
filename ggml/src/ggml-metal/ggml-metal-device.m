@@ -474,10 +474,19 @@ ggml_metal_device_t ggml_metal_device_init(void) {
 
             dev->props.has_bfloat  = [dev->mtl_device supportsFamily:MTLGPUFamilyMetal3_GGML];
             dev->props.has_bfloat |= [dev->mtl_device supportsFamily:MTLGPUFamilyApple6];
+            if (getenv("GGML_METAL_BF16_DISABLE") != NULL) {
+                dev->props.has_bfloat = false;
+            }
 
             dev->props.has_tensor = [dev->mtl_device supportsFamily:MTLGPUFamilyMetal4_GGML];
             if (getenv("GGML_METAL_TENSOR_DISABLE") != NULL) {
                 dev->props.has_tensor = false;
+            }
+
+            // TODO: tmp until figure out how to handle https://github.com/ggml-org/llama.cpp/pull/16634#issuecomment-3441726885
+            if (dev->props.has_tensor && dev->props.has_bfloat) {
+                GGML_LOG_WARN("%s: disabling bfloat support as a workaround for tensor API incompatibility\n", __func__);
+                dev->props.has_bfloat = false;
             }
 
             dev->props.use_residency_sets = true;
